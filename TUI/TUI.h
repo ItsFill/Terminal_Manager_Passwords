@@ -2,6 +2,9 @@
 #define TERMINALMANAGERPASSWORDS_GUI_H
 
 #include <iostream>
+#include <vector>
+#include "../Encryption/Encryption.h"
+#include "../File/File.h"
 
 
 class TUI {
@@ -65,13 +68,18 @@ public:
         std::cout << "  └──────────────────────────────────────────────────────────┘\n";
         std::cout << "  >  ";
     }
-    void list() {
+
+    void list(Encryptor &enc, File &file) {
+        std::vector<Entry> accounts;
+
         std::cout << "\033[2J\033[H";
         std::cout << "  ┌──────────────────────────────────────────────────────────┐\n";
         std::cout << "  │   CRYPT-VAULT v1.0 | ACTION: ALL ENTRIES                 │\n";
         std::cout << "  ├──────────┬────────────────────┬──────────────────────────┤\n";
         std::cout << "  │   RES    │      USERNAME      │         PASSWORD         │\n";
         std::cout << "  ├──────────┼────────────────────┼──────────────────────────┤\n";
+        file.list();
+        std::cout << "  └──────────┴────────────────────┴──────────────────────────┘\n";
     }
 };
 

@@ -16,6 +16,7 @@ struct Error_with_open {
 
 class File {
     std::string name;
+    Encryptor enc;
 
     std::vector<std::string> smasher(std::string text) {
         std::vector<std::string> temp_vector;
@@ -27,75 +28,76 @@ class File {
         }
 
         for (unsigned int i = 0; i < text.length() - 3; i++) {
-            temp_text = text.substr(i, 3);
+            temp_vector.push_back(text.substr(i, 3));
         }
 
         return temp_vector;
     }
 
 public:
-    File() {
+    File(Encryptor &other) {
+        enc = other;
         name = "dates.txt";
     }
 
 
-    void add(Encryptor &enc, Entry &account) {
+    void add(Entry &account) {
         std::ofstream file;
 
         file.open(name, std::ios::app | std::ios::binary);
 
         if (!file.is_open()) { throw Error_with_open("Error"); }
 
-        enc.encrypt(account.nickname);
-        enc.encrypt(account.password);
+        account.lock();
 
-        file << account.service << "\t" << account.nickname << "\t" << account.password << "\n";
+        file << account.get_service() << "\t" << account.get_nickname() << "\t" << account.get_password() << "\n";
 
         file.close();
     }
 
-    void add(Encryptor &enc, const std::string &service, const std::string &nickname, const std::string &pass) {
-        Entry temp = { service, nickname, pass };
+    void add(const std::string &service, const std::string &nickname, const std::string &pass) {
+        Entry temp(enc);
+        temp.set(service, nickname, pass);
 
-        add(enc, temp);
+        add(temp);
     }
 
 
-    void list(Encryptor &enc) {
+    std::vector<Entry> list() {
         std::ifstream file(name, std::ios::in | std::ios::binary);
 
         if (!file.is_open()) { throw Error_with_open("Error"); }
         std::string temp_a, temp_b, temp_c;
+        std::vector<Entry> accounts;
 
         while (std::getline(file, temp_a, '\t')
-            && std::getline(file, temp_b, '\t')
-            && std::getline(file, temp_c, '\n') ) {
+               && std::getline(file, temp_b, '\t')
+               && std::getline(file, temp_c, '\n')) {
 
-            enc.encrypt(temp_b);
-            enc.encrypt(temp_c);
+            Entry temp(enc, temp_a, temp_b, temp_c);
 
-            std::cout << "  │ " << std::left << std::setw(8)  << temp_a.substr(0, 8)
-                              << " │ " << std::left << std::setw(18) << temp_b.substr(0, 18)
-                              << " │ " << std::left << std::setw(24) << temp_c.substr(0, 24)
-                              << " │\n";
+            temp.unlock();
+
+            accounts.push_back(temp);
         }
 
-        std::cout << "  └──────────┴────────────────────┴──────────────────────────┘\n";
-
         file.close();
+
+        return accounts;
     }
 
 
-    void remove(Encryptor &enc, const std::string target_service) {
-
+    void remove(const std::string target_service) {
         //OPEN BLOCK FILE TO READ
 
-        Entry temp;
+        Entry temp(enc);
 
         //MAKE TARGET SERVICE TO LOWER
         std::string temp_service = target_service;
         std::transform(temp_service.begin(), temp_service.end(), temp_service.begin(),
-                    [] (char c) {return std::tolower(c); });
+                       [](char c) { return std::tolower(c); });
+
+        std::string temp_a, temp_b, temp_c;
 
         std::ifstream file_read;
 
@@ -104,12 +106,14 @@ public:
 
         std::vector<Entry> accounts;
 
-        while (std::getline(file_read, temp.service, '\t')
-            && std::getline(file_read, temp.nickname, '\t')
-            && std::getline(file_read, temp.password, '\n')) {
 
-            enc.encrypt(temp.nickname);
-            enc.encrypt(temp.password);
+        while (std::getline(file_read, temp_a, '\t')
+               && std::getline(file_read, temp_b, '\t')
+               && std::getline(file_read, temp_c, '\n')) {
+
+            temp.set(temp_a, temp_b, temp_c);
+
+            temp.unlock();
 
             accounts.push_back(temp);
         }
@@ -119,18 +123,15 @@ public:
         //DELETE BLOCK ACCOUNT WHICH WE NEEDN'T
 
         for (auto i = accounts.begin(); i != accounts.end();) {
-            std::string check_name = i->service;
+            std::string check_name = i->get_service();
             std::transform(check_name.begin(), check_name.end(), check_name.begin(),
-                    [](char c) { return std::tolower(c); });
+                           [](char c) { return std::tolower(c); });
             if (check_name == temp_service) {
                 i = accounts.erase(i);
-            }
-            else {
-                enc.encrypt(i->nickname);
-                enc.encrypt(i->password);
+            } else {
+                i->lock();
                 ++i;
             }
-
         }
 
         //REWRITE BLOCK UPDATE IN US FILE
@@ -141,15 +142,14 @@ public:
         if (!file_write.is_open()) { throw Error_with_open("Error"); }
 
         for (auto i = accounts.begin(); i != accounts.end(); i++) {
-            file_write << i->service << "\t" << i->nickname << "\t" << i->password << "\n";
+            file_write << i->get_service() << "\t" << i->get_nickname() << "\t" << i->get_password() << "\n";
         }
 
         file_write.close();
-
     }
 
 
-    void search(Encryptor &enc, std::string target_service) {
+    void search(std::string target_service) {
         std::ifstream file;
 
         file.open(name, std::ios::in | std::ios::binary);
@@ -157,31 +157,34 @@ public:
         if (!file.is_open()) { throw Error_with_open("Error"); }
 
         std::transform(target_service.begin(), target_service.end(), target_service.begin(),
-                [] (char c) {return std::tolower(c); });
+                       [](char c) { return std::tolower(c); });
 
         std::vector<std::string> smashed_service = smasher(target_service);
 
-        Entry temp;
+        Entry temp(enc);
 
-        while (std::getline(file, temp.service, '\t')
-                && std::getline(file, temp.nickname, '\t')
-                && std::getline(file, temp.password, '\n')) {
-            std::string lower_service = temp.service;
+        std::string temp_a, temp_b, temp_c;
+
+        while (std::getline(file, temp_a, '\t')
+               && std::getline(file, temp_b, '\t')
+               && std::getline(file, temp_c, '\n')) {
+            std::string lower_service = temp_a;
             std::transform(lower_service.begin(), lower_service.end(), lower_service.begin(),
-                [] (char c) {return std::tolower(c); });
+                           [](char c) { return std::tolower(c); });
 
             int counter = 0;
-            for (const auto &i : smashed_service) {
+            for (const auto &i: smashed_service) {
                 if (lower_service.find(i) != std::string::npos) {
                     counter++;
                 }
             }
 
-            double score = (double)counter / (double)smashed_service.size();
+            double score = static_cast<double>(counter) / smashed_service.size();
 
             if (score > 0.5 || lower_service.find(target_service) != std::string::npos) {
-                enc.encrypt(temp.nickname);
-                enc.encrypt(temp.password);
+
+                temp.set(temp_a, temp_b, temp_c);
+                temp.unlock();
 
                 std::cout << "\033[2J\033[H";
                 std::cout << "  ┌──────────────────────────────────────────────────────────┐\n";
@@ -189,9 +192,9 @@ public:
                 std::cout << "  ├──────────┬────────────────────┬──────────────────────────┤\n";
                 std::cout << "  │   SERVICE│      USERNAME      │         PASSWORD         │\n";
                 std::cout << "  ├──────────┼────────────────────┼──────────────────────────┤\n";
-                std::cout << "  │ " << std::setw(8)  << std::left << temp.service
-                            << " │ " << std::setw(18) << std::left << temp.nickname
-                            << " │ " << std::setw(24) << std::left << temp.password << " │\n";
+                std::cout << "  │ " << std::setw(8) << std::left << temp.get_service()
+                        << " │ " << std::setw(18) << std::left << temp.get_nickname()
+                        << " │ " << std::setw(24) << std::left << temp.get_password() << " │\n";
                 std::cout << "  └──────────┴────────────────────┴──────────────────────────┘\n";
             }
         }

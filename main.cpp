@@ -11,8 +11,6 @@
 
 int main() {
     //MAKE COUT AND CIN FASTER
-    std::ios_base::sync_with_stdio(false);
-    std::cin.tie(NULL);
 
     //FOR SYMBOLS AND BEAUTY DESIGN
 #ifdef _WIN32
@@ -28,15 +26,15 @@ int main() {
 
     //GET READY US APP
     TUI ui;
-    File db;
     std::string masterPass;
 
     //START APP
     ui.first();
     std::cin >> masterPass;
 
-
     Encryptor enc(masterPass);
+
+    File db(enc);
 
     bool isRunning = true;
     while (isRunning) {
@@ -55,14 +53,14 @@ int main() {
                     ui.add();
                     std::string res, user, pass;
                     std::cin >> res >> user >> pass;
-                    db.add(enc, res, user, pass);
+                    db.add(res, user, pass);
                     break;
                 }
                 case 2: {
                     ui.search();
                     std::string target;
                     std::cin >> target;
-                    db.search(enc, target);
+                    db.search(target);
 
                     std::cout << "\n  Press Enter to continue...";
                     std::cin.ignore();
@@ -73,12 +71,12 @@ int main() {
                     ui.remove();
                     std::string target;
                     std::cin >> target;
-                    db.remove(enc, target);
+                    db.remove(target);
                     break;
                 }
                 case 4: {
-                    ui.list();
-                    db.list(enc);
+                    ui.list(enc, db);
+                    db.list();
                     std::cout << "\n  Press Enter to return to menu...";
                     std::cin.ignore();
                     std::cin.get();
@@ -90,7 +88,7 @@ int main() {
                 default:
                     break;
             }
-        } catch (const Error_with_open& e) {
+        } catch (const Error_with_open &e) {
             std::cerr << "  [ERROR] Could not open database file! \n";
             std::cin.get();
         }

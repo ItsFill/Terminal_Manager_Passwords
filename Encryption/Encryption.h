@@ -12,8 +12,15 @@ public:
     Encryptor(std::string master_pass) : master_pass(master_pass) {
         key = 0;
         for (int i = 0; i < master_pass.length(); i++) {
-            key += (int)master_pass[i] * (i + 1);
+            key += (int) master_pass[i] * (i + 1);
         }
+    }
+
+    Encryptor() : Encryptor("") {}
+
+    void operator=(const Encryptor &other) {
+        this->master_pass = other.master_pass;
+        this->key = other.key;
     }
 
     void encrypt(std::string &line) {

@@ -3,6 +3,7 @@
 
 #include "TUI/TUI.h"
 #include "File/File.h"
+#include "Date_Type/Date_Type.h"
 #include "Encryption/Encryption.h"
 
 #ifdef _WIN32
@@ -34,6 +35,7 @@ int main() {
 
     Encryptor enc(masterPass);
 
+    Entry de(enc);
     File db(enc);
 
     bool isRunning = true;
@@ -51,9 +53,8 @@ int main() {
             switch (choice) {
                 case 1: {
                     ui.add();
-                    std::string res, user, pass;
-                    std::cin >> res >> user >> pass;
-                    db.add(res, user, pass);
+                    std::cin >>de;
+                    db.add(de);
                     break;
                 }
                 case 2: {
@@ -88,8 +89,14 @@ int main() {
                 default:
                     break;
             }
-        } catch (const Error_with_open &e) {
+        } catch (const Error_file_open &e) {
             std::cerr << "  [ERROR] Could not open database file! \n";
+            std::cin.get();
+        } catch (const Error &e) {
+            std::cerr << "  [ERROR] " << e.what() << "\n";
+            std::cin.clear();
+            std::cin.ignore(10000, '\n');
+            std::cout << "  Press Enter to try again...";
             std::cin.get();
         }
     }

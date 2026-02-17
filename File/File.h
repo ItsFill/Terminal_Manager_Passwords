@@ -10,7 +10,7 @@
 #include "../Date_Type/Date_Type.h"
 #include "../Encryption/Encryption.h"
 
-struct Error_with_open {
+struct Error_file_open {
     std::string name;
 };
 
@@ -46,7 +46,7 @@ public:
 
         file.open(name, std::ios::app | std::ios::binary);
 
-        if (!file.is_open()) { throw Error_with_open("Error"); }
+        if (!file.is_open()) { throw Error_file_open("Error"); }
 
         account.lock();
 
@@ -66,7 +66,7 @@ public:
     std::vector<Entry> list() {
         std::ifstream file(name, std::ios::in | std::ios::binary);
 
-        if (!file.is_open()) { throw Error_with_open("Error"); }
+        if (!file.is_open()) { throw Error_file_open("Error"); }
         std::string temp_a, temp_b, temp_c;
         std::vector<Entry> accounts;
 
@@ -102,7 +102,7 @@ public:
         std::ifstream file_read;
 
         file_read.open(name, std::ios::in | std::ios::binary);
-        if (!file_read.is_open()) { throw Error_with_open("Error"); }
+        if (!file_read.is_open()) { throw Error_file_open("Error"); }
 
         std::vector<Entry> accounts;
 
@@ -139,7 +139,7 @@ public:
         std::ofstream file_write;
 
         file_write.open(name, std::ios::out | std::ios::binary | std::ios::trunc);
-        if (!file_write.is_open()) { throw Error_with_open("Error"); }
+        if (!file_write.is_open()) { throw Error_file_open("Error"); }
 
         for (auto i = accounts.begin(); i != accounts.end(); i++) {
             file_write << i->get_service() << "\t" << i->get_nickname() << "\t" << i->get_password() << "\n";
@@ -154,7 +154,7 @@ public:
 
         file.open(name, std::ios::in | std::ios::binary);
 
-        if (!file.is_open()) { throw Error_with_open("Error"); }
+        if (!file.is_open()) { throw Error_file_open("Error"); }
 
         std::transform(target_service.begin(), target_service.end(), target_service.begin(),
                        [](char c) { return std::tolower(c); });
